@@ -1,0 +1,37 @@
+== Directory tree (DNs) ==
+dn: dc=conote,dc=edu
+dn: ou=students,dc=conote,dc=edu
+dn: ou=teachers,dc=conote,dc=edu
+dn: ou=administrators,dc=conote,dc=edu
+dn: ou=groups,dc=conote,dc=edu
+dn: ou=services,dc=conote,dc=edu
+dn: uid=student01,ou=students,dc=conote,dc=edu
+dn: uid=student02,ou=students,dc=conote,dc=edu
+dn: uid=teacher01,ou=teachers,dc=conote,dc=edu
+dn: uid=teacher02,ou=teachers,dc=conote,dc=edu
+dn: uid=admin01,ou=administrators,dc=conote,dc=edu
+dn: uid=support01,ou=administrators,dc=conote,dc=edu
+dn: cn=students,ou=groups,dc=conote,dc=edu
+dn: cn=teachers,ou=groups,dc=conote,dc=edu
+dn: cn=administrators,ou=groups,dc=conote,dc=edu
+dn: cn=it-support,ou=groups,dc=conote,dc=edu
+
+== Groups and members ==
+dn: cn=students,ou=groups,dc=conote,dc=edu
+cn: students
+member: uid=student01,ou=students,dc=conote,dc=edu
+member: uid=student02,ou=students,dc=conote,dc=edu
+
+dn: cn=teachers,ou=groups,dc=conote,dc=edu
+cn: teachers
+member: uid=teacher01,ou=teachers,dc=conote,dc=edu
+member: uid=teacher02,ou=teachers,dc=conote,dc=edu
+
+dn: cn=administrators,ou=groups,dc=conote,dc=edu
+cn: administrators
+member: uid=admin01,ou=administrators,dc=conote,dc=edu
+
+dn: cn=it-support,ou=groups,dc=conote,dc=edu
+cn: it-support
+member: uid=support01,ou=administrators,dc=conote,dc=edu
+

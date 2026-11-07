@@ -1,0 +1,10 @@
+== 1. student01 searches for student02 (expect: nothing returned) ==
+== 2. student01 reads own entry (expect: own data, NO userPassword) ==
+dn: uid=student01,ou=students,dc=conote,dc=edu
+uid: student01
+mail: student01@conote.edu
+employeeNumber: S2026001
+
+== 3. keycloak-bind counts users (expect: 6) and sees no password ==
+6
+0

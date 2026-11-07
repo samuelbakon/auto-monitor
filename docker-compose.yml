@@ -1,3 +1,4 @@
+
 name: monitor
 
 networks:
@@ -93,7 +94,7 @@ services:
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
-      backend: { condition: service_healthy }
+      backend: { condition: service_started }
     environment:
       PG_DSN: postgresql://${PG_USER}:${PG_PASSWORD}@postgres:5432/agent_memory
       BACKEND_URL: http://backend:8080
@@ -129,7 +130,8 @@ services:
     container_name: monitor-ws
     restart: unless-stopped
     depends_on:
-      backend: { condition: service_healthy }
+      postgres: { condition: service_healthy}
+      backend: { condition: service_started }
     environment:
       PORT: 4000
       BACKEND_URL: http://backend:8080
@@ -163,7 +165,7 @@ services:
       monitor-net: { ipv4_address: 172.28.0.10 }
     healthcheck:
       test:
-        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/_health >/dev/null"]
+        ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/_health >/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 5

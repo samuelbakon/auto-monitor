@@ -1,0 +1,58 @@
+# extended LDIF
+#
+# LDAPv3
+# base <dc=conote,dc=edu> with scope subtree
+# filter: (objectClass=inetOrgPerson)
+# requesting: uid cn mail employeeNumber departmentNumber 
+#
+
+# student01, students, conote.edu
+dn: uid=student01,ou=students,dc=conote,dc=edu
+uid: student01
+cn: Amina Bello
+mail: student01@conote.edu
+departmentNumber: Computer Science
+employeeNumber: S2026001
+
+# student02, students, conote.edu
+dn: uid=student02,ou=students,dc=conote,dc=edu
+uid: student02
+cn: Paul Nkeng
+mail: student02@conote.edu
+departmentNumber: Cybersecurity
+employeeNumber: S2026002
+
+# teacher01, teachers, conote.edu
+dn: uid=teacher01,ou=teachers,dc=conote,dc=edu
+uid: teacher01
+cn: Grace Fon
+mail: teacher01@conote.edu
+departmentNumber: Cybersecurity
+
+# teacher02, teachers, conote.edu
+dn: uid=teacher02,ou=teachers,dc=conote,dc=edu
+uid: teacher02
+cn: Eric Tabi
+mail: teacher02@conote.edu
+departmentNumber: Computer Science
+
+# admin01, administrators, conote.edu
+dn: uid=admin01,ou=administrators,dc=conote,dc=edu
+uid: admin01
+cn: Diane Mbah
+mail: admin01@conote.edu
+departmentNumber: Administration
+
+# support01, administrators, conote.edu
+dn: uid=support01,ou=administrators,dc=conote,dc=edu
+uid: support01
+cn: Kevin Ewane
+mail: support01@conote.edu
+departmentNumber: IT Support
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 7
+# numEntries: 6

@@ -1,0 +1,32 @@
+Q1. What is User Federation in Keycloak?
+
+Plain: Keycloak doesn’t keep its own list of people. It “borrows” them from the directory and asks the directory to check passwords.
+Technical: a federation provider connects a realm to an external user store (LDAP, AD, or a custom provider). Keycloak looks users up there and validates credentials against it. Your realm conote has the conote-openldap provider. Every student01 login is checked by an LDAP bind.
+
+Q2. Importing vs federating users?
+
+Federate only (import off): no local copy, and every lookup goes live to LDAP. It’s always current, but LDAP must be reachable for everything, and there’s nowhere to attach Keycloak-only data.
+Import: Keycloak stores a linked copy of the profile, refreshed by sync. Passwords are still checked by LDAP. Keycloak-only data (roles, MFA, sessions, linked accounts) has a place to live.
+Your choice (D-16): import + READ_ONLY + 60-second changed-user sync. C1 showed the trade-off: email waited for the sync, while department, set to always read from LDAP, was instant.
+
+Q3. What is an LDAP bind account?
+
+Plain: the service’s own login to the directory, used only to search for people and read their details.
+Technical: it’s a DN and password that Keycloak uses for its directory connection. Yours is cn=keycloak-bind,ou=services. It’s read-only by ACL, can’t read password hashes, and isn’t a person, so it never appears as a user. You never use cn=admin: a leaked federation configuration must not hand over the whole directory (D-15, D-17).
+
+Q4. What happens when a user is disabled in the source directory?
+
+New logins fail immediately. Every login is an LDAP bind, and the locked account’s bind is refused, even with the right password (M2-12, M2-13).
+Keycloak’s local copy still shows “Enabled”, because the lock is an LDAP password-policy attribute that the default mappers don’t read. Login is still denied.
+Existing sessions and tokens keep working until they expire. So the full off-boarding procedure is: disable in LDAP, then sign the user out in Keycloak and revoke their sessions. Short token lifetimes (M7) limit the gap.
+With Active Directory instead, Keycloak reads the userAccountControl flag and marks the user disabled itself.
+
+Q5. Why must the identity source remain authoritative for institutional accounts?
+
+Plain: the registry office decides who is a student. If each system kept its own list, someone who left could still get in through the system nobody updated.
+Technical: one source of truth means:
+joiners and leavers are handled once, by the right office (registry or HR);
+there’s no drift or conflict between copies;
+one audit trail;
+one place to disable an account.
+READ_ONLY mode enforces this technically: Keycloak can’t change directory data (C1 bonus check).

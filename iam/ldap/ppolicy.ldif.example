@@ -1,0 +1,32 @@
+# --- 1) Load module (as EXTERNAL via ldapi). Full path needed: cn=module{0} searches
+#        /opt/bitnami/openldap/libexec/openldap, but ppolicy.so lives in .../lib/openldap
+# dn: cn=module{0},cn=config
+# changetype: modify
+# add: olcModuleLoad
+# olcModuleLoad: /opt/bitnami/openldap/lib/openldap/ppolicy.so
+
+# --- 2) Policy entry (as cn=admin,dc=conote,dc=edu)
+dn: ou=policies,dc=conote,dc=edu
+objectClass: organizationalUnit
+ou: policies
+
+dn: cn=default,ou=policies,dc=conote,dc=edu
+objectClass: device
+objectClass: pwdPolicy
+cn: default
+pwdAttribute: userPassword
+pwdLockout: TRUE
+pwdMaxFailure: 5
+pwdLockoutDuration: 900
+pwdFailureCountInterval: 900
+
+# --- 3) Overlay (as EXTERNAL via ldapi); <MDB_DN> = database with olcSuffix dc=conote,dc=edu
+# dn: olcOverlay=ppolicy,<MDB_DN>
+# objectClass: olcOverlayConfig
+# objectClass: olcPPolicyConfig
+# olcOverlay: ppolicy
+# olcPPolicyDefault: cn=default,ou=policies,dc=conote,dc=edu
+# olcPPolicyUseLockout: TRUE
+
+# Disable a user:  replace: pwdAccountLockedTime -> 000001010000Z
+# Re-enable:       delete: pwdAccountLockedTime

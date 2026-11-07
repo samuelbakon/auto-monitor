@@ -1,0 +1,11 @@
+== 5 wrong passwords for teacher02 ==
+ldap_bind: Invalid credentials (49)
+ldap_bind: Invalid credentials (49)
+ldap_bind: Invalid credentials (49)
+ldap_bind: Invalid credentials (49)
+ldap_bind: Invalid credentials (49)
+== now the CORRECT password (expect: Invalid credentials - account is locked) ==
+dn:uid=teacher02,ou=teachers,dc=conote,dc=edu
+== lock time set automatically by the policy ==
+dn: uid=teacher02,ou=teachers,dc=conote,dc=edu
+

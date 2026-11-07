@@ -1,0 +1,7 @@
+# Applied with: docker exec -i conote-openldap ldapmodify -Q -Y EXTERNAL -H "ldapi://%2Fopt%2Fbitnami%2Fopenldap%2Fvar%2Frun%2Fldapi"
+# (replace <MDB_DN> with the dn of the database whose olcSuffix is dc=conote,dc=edu)
+dn: <MDB_DN>
+changetype: modify
+add: olcAccess
+olcAccess: {0}to attrs=userPassword by self =xw by anonymous auth by * none
+olcAccess: {1}to dn.subtree="dc=conote,dc=edu" by dn.exact="cn=keycloak-bind,ou=services,dc=conote,dc=edu" read by self read by * none

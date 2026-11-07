@@ -1,0 +1,6 @@
+NAME                 IMAGE                                        COMMAND                  SERVICE       CREATED          STATUS                    PORTS
+conote-keycloak      quay.io/keycloak/keycloak:26.8.1             "/opt/keycloak/bin/k…"   keycloak      19 minutes ago   Up 19 minutes (healthy)   127.0.0.1:8180->8180/tcp
+conote-keycloak-db   postgres:17-alpine                           "docker-entrypoint.s…"   keycloak-db   24 minutes ago   Up 24 minutes (healthy)   5432/tcp
+conote-openldap      bitnamilegacy/openldap:2.6.10-debian-12-r4   "/opt/bitnami/script…"   openldap      24 minutes ago   Up 24 minutes (healthy)   127.0.0.1:1389->1389/tcp
+
+conote-keycloak  | 2026-11-06 20:02:11,823 INFO  [io.quarkus] (main) Keycloak 26.8.1 on JVM (powered by Quarkus 3.40.1) started in 39.183s. Listening on: http://0.0.0.0:8180. Management interface listening on http://0.0.0.0:9000.

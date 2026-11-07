@@ -1,0 +1,81 @@
+name: conote-iam
+
+networks:
+  iam-net:
+    name: conote-iam-net          # fixed name so auto-monitor can join it later (M3)
+
+volumes:
+  kc-db-data:                     # Keycloak's database files survive restarts
+  ldap-data:                      # LDAP directory files survive restarts
+
+services:
+  keycloak-db:
+    image: postgres:17-alpine
+    container_name: conote-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD in iam/.env}
+    volumes:
+      - kc-db-data:/var/lib/postgresql/data
+    networks: [iam-net]           # not published: only Keycloak can reach it
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  openldap:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    container_name: conote-openldap
+    restart: unless-stopped
+    environment:
+      LDAP_ROOT: dc=conote,dc=edu
+      LDAP_ADMIN_USERNAME: admin                      # → cn=admin,dc=conote,dc=edu
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:?set LDAP_ADMIN_PASSWORD in iam/.env}
+      LDAP_CUSTOM_LDIF_DIR: /ldifs                    # load our tree on first start
+      LDAP_ALLOW_ANON_BINDING: "no"                   # nobody reads the directory without logging in
+    volumes:
+      - ldap-data:/bitnami/openldap
+      - ./ldap/ldif:/ldifs:ro
+    ports:
+      - "127.0.0.1:1389:1389"                         # only reachable from this PC, for ldapsearch
+    networks: [iam-net]
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:1389 -D cn=admin,dc=conote,dc=edu -w \"$$LDAP_ADMIN_PASSWORD\" -b dc=conote,dc=edu -s base dn >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: conote-keycloak
+    command: start                                    # production mode (not start-dev)
+    restart: unless-stopped
+    depends_on:
+      keycloak-db: { condition: service_healthy }
+      openldap: { condition: service_healthy }
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_HOSTNAME: http://keycloak.conote.local:8180  # the one name (step A1)
+      KC_HTTP_PORT: "8180" 
+      KC_HTTP_ENABLED: "true"                         # HTTP for now; HTTPS in Milestone 7
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-kcadmin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?set KC_ADMIN_PASSWORD in iam/.env}
+    ports:
+      - "127.0.0.1:8180:8180"
+    networks:
+      iam-net:
+        aliases: [keycloak.conote.local]              # same name inside Docker
+    healthcheck:
+      test: ["CMD", "bash", "-c", 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && grep -q UP <&3']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s

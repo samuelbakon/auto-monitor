@@ -1,0 +1,2 @@
+ldap_bind: Inappropriate authentication (48)
+	additional info: anonymous bind disallowed

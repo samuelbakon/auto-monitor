@@ -1,0 +1,8 @@
+NAME                 IMAGE                                        COMMAND                  SERVICE       CREATED              STATUS                                 PORTS
+conote-keycloak      quay.io/keycloak/keycloak:26.8.1             "/opt/keycloak/bin/k…"   keycloak      About a minute ago   Up About a minute (health: starting)   127.0.0.1:8180->8180/tcp
+conote-keycloak-db   postgres:17-alpine                           "docker-entrypoint.s…"   keycloak-db   About a minute ago   Up About a minute (healthy)            5432/tcp
+conote-openldap      bitnamilegacy/openldap:2.6.10-debian-12-r4   "/opt/bitnami/script…"   openldap      About a minute ago   Up About a minute (healthy)            127.0.0.1:1389->1389/tcp
+
+Users after restart: 6
+Realms after restart:
+master

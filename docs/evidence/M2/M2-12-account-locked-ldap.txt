@@ -1,0 +1,8 @@
+== student02 (locked), CORRECT password (expect: Invalid credentials (49)) ==
+dn:uid=student02,ou=students,dc=conote,dc=edu
+== student01 (not locked), correct password (expect: dn:uid=student01,...) ==
+dn:uid=student01,ou=students,dc=conote,dc=edu
+== lock attribute on student02 ==
+dn: uid=student02,ou=students,dc=conote,dc=edu
+pwdAccountLockedTime: 000001010000Z
+

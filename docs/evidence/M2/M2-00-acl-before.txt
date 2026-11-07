@@ -1,0 +1,6 @@
+dn: uid=student02,ou=students,dc=conote,dc=edu
+uid: student02
+mail: student02@conote.edu
+employeeNumber: S2026002
+userPassword: <HASH WAS READABLE - value redacted>
+
