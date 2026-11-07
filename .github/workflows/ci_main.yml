@@ -1,0 +1,103 @@
+# =============================================================================
+# CI · MAIN  (Continuous Integration orchestrator for auto-monitor)
+#
+#   1 Validate ──► 2 Test ──┐
+#              ├─► 3a SAST ─┼─► 4 Build ─► 5 Package ─► CI evidence
+#              └─► 3b SCA ──┘
+#
+# Each stage lives in its own reusable workflow (ci_*.yml) so it can be
+# reviewed, owned and changed separately. This file only wires them together.
+# If ANY stage fails, the following stages never run (fail closed).
+# =============================================================================
+name: CI · main
+
+on:
+  push:
+    branches: [main, develop, "feature/**", "fix/**", "test/**"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# Least privilege: the default token can only READ the repository.
+# Jobs that need more ask for it explicitly below.
+permissions:
+  contents: read
+
+# Two pushes on the same branch: the older run is cancelled (no interference).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: "1 · Validate"
+    uses: ./.github/workflows/ci_validate.yml
+
+  test:
+    name: "2 · Test"
+    needs: validate
+    uses: ./.github/workflows/ci_test.yml
+
+  sast:
+    name: "3a · SAST"
+    needs: validate
+    uses: ./.github/workflows/ci_sast.yml
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to the Security tab
+
+  sca:
+    name: "3b · SCA"
+    needs: validate
+    uses: ./.github/workflows/ci_sca.yml
+
+  build:
+    name: "4-5 · Build & Package"
+    needs: [test, sast, sca]
+    uses: ./.github/workflows/ci_build.yml
+
+  evidence:
+    name: "CI evidence"
+    needs: [validate, test, sast, sca, build]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Write traceability summary
+        env:
+          R_VALIDATE: ${{ needs.validate.result }}
+          R_TEST: ${{ needs.test.result }}
+          R_SAST: ${{ needs.sast.result }}
+          R_SCA: ${{ needs.sca.result }}
+          R_BUILD: ${{ needs.build.result }}
+        run: |
+          {
+            echo "## CI evidence"
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Ref | \`${GITHUB_REF}\` |"
+            echo "| Event | ${GITHUB_EVENT_NAME} |"
+            echo "| Triggered by | @${GITHUB_ACTOR} |"
+            echo "| Run | ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} |"
+            echo ""
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| 1 Validate | ${R_VALIDATE} |"
+            echo "| 2 Test | ${R_TEST} |"
+            echo "| 3a SAST | ${R_SAST} |"
+            echo "| 3b SCA | ${R_SCA} |"
+            echo "| 4-5 Build & Package | ${R_BUILD} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if any stage did not succeed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::At least one CI stage did not succeed ($RESULTS)"
+              exit 1
+            fi
+          done
+          echo "All CI stages succeeded for ${GITHUB_SHA}"

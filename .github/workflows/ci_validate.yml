@@ -1,0 +1,91 @@
+# =============================================================================
+# CI · Stage 1 · VALIDATE
+# Cheap, fast checks that stop obviously broken or unsafe changes early:
+#   - repository hygiene (no .env / private keys committed, required files)
+#   - docker compose configuration is valid
+#   - workflow files are valid (actionlint)
+#   - pipeline policy guard (nobody silently weakened a security gate)
+#   - Python lint (ruff)
+# =============================================================================
+name: CI · validate
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  ACTIONLINT_VERSION: "1.7.7"
+  ACTIONLINT_SHA256: "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757"
+
+jobs:
+  repo-hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false # the git token is not left on disk
+
+      - name: No secret files tracked by Git
+        run: |
+          pattern='(^|/)\.env$|(^|/)\.env\.(local|prod|production)$|\.pem$|\.key$|id_rsa'
+          if git ls-files | grep -E "$pattern"; then
+            echo "::error::Sensitive files (listed above) are tracked by Git"
+            exit 1
+          fi
+          echo "OK - no .env / key files tracked"
+
+      - name: Required files exist
+        run: |
+          for f in docker-compose.yml .env.example backend/pom.xml \
+                   frontend/package-lock.json ws-gateway/package-lock.json \
+                   agent/requirements.txt \
+                   frontend/Dockerfile backend/Dockerfile agent/Dockerfile ws-gateway/Dockerfile; do
+            test -f "$f" || { echo "::error::missing $f"; exit 1; }
+          done
+          echo "OK - all required files present"
+
+      - name: docker compose configuration is valid
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          rm .env
+          echo "OK - docker-compose.yml is valid"
+
+  workflow-lint:
+    name: Workflow lint + policy guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (checksum verified)
+        run: |
+          curl -sSfL -o al.tgz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  al.tgz" | sha256sum -c -
+          tar xzf al.tgz actionlint
+
+      - name: Lint GitHub workflows
+        run: ./actionlint -color
+
+      - name: Pipeline policy guard
+        run: bash .github/scripts/policy_guard.sh
+
+  python-lint:
+    name: Python lint (ruff)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ruff>=0.7,<1.0"
+      - run: ruff check agent/app agent/tests

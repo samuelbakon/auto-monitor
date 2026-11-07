@@ -1,0 +1,6 @@
+# Paths excluded from SAST (documentation and test fixtures only)
+specs.md
+docs/
+agent/tests/
+backend/src/test/
+ws-gateway/src/*.test.ts

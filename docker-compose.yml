@@ -93,7 +93,10 @@ services:
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
-      backend: { condition: service_healthy }
+      # FIX (risk R-11): was "service_healthy". The backend readiness probe
+      # includes the agent, so backend waited for agent and agent waited for
+      # backend -> start-up deadlock. The agent retries the backend by itself.
+      backend: { condition: service_started }
     environment:
       PG_DSN: postgresql://${PG_USER}:${PG_PASSWORD}@postgres:5432/agent_memory
       BACKEND_URL: http://backend:8080

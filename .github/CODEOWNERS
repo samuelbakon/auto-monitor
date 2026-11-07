@@ -1,0 +1,16 @@
+# =============================================================================
+# CODEOWNERS - who MUST review changes to sensitive paths.
+# With branch protection "Require review from Code Owners", a PR touching
+# these files cannot be merged without approval from the owner listed.
+# Replace @Ezra-410 by the security reviewer (e.g. a classmate / lecturer).
+# =============================================================================
+# Pipeline definitions and security policy
+/.github/                 @Ezra-410
+/.trivyignore             @Ezra-410
+/.semgrepignore           @Ezra-410
+# Container build definitions
+**/Dockerfile             @Ezra-410
+**/.dockerignore          @Ezra-410
+/docker-compose.yml       @Ezra-410
+# Security-sensitive code
+/backend/src/main/java/com/monitor/backend/security/  @Ezra-410
