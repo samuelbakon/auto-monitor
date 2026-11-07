@@ -1,0 +1,83 @@
+# =============================================================================
+# CI · Stage 3a · SAST  (Static Application Security Testing)
+# Reads OUR source code (Java, Python, TypeScript, Vue, Dockerfiles) looking
+# for insecure patterns: injections, weak crypto, unsafe deserialisation...
+#
+# Tool   : Semgrep (version pinned), ruleset p/default
+# Policy : findings of severity ERROR  -> pipeline FAILS
+#          WARNING / INFO               -> reported (Security tab + artifact)
+# Exceptions: "# nosemgrep" on the exact line + justification + entry in
+#             docs/SECURITY-EXCEPTIONS.md (reviewed by CODEOWNERS)
+# =============================================================================
+name: CI · sast
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  SEMGREP_VERSION: "1.184.0"
+
+jobs:
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Semgrep ${{ env.SEMGREP_VERSION }}
+        run: pip install "semgrep==${SEMGREP_VERSION}"
+
+      - name: Scan source code
+        run: |
+          mkdir -p reports
+          semgrep scan --config p/default --metrics off \
+            --json-output=reports/semgrep.json \
+            --sarif-output=reports/semgrep.sarif
+          echo "Scan finished - applying severity policy next"
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@9418214df1f2c4b8128c770156c409013b07d6b9 # v3
+        with:
+          sarif_file: reports/semgrep.sarif
+          category: semgrep
+
+      - name: Keep SAST report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sast-report
+          path: reports/
+          retention-days: 90
+
+      - name: Security gate - fail on ERROR findings
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          results = json.load(open("reports/semgrep.json"))["results"]
+          sev = {}
+          for r in results:
+              s = r["extra"]["severity"]
+              sev[s] = sev.get(s, 0) + 1
+          print("Findings by severity:", sev or "none")
+          blocking = [r for r in results if r["extra"]["severity"] == "ERROR"]
+          for r in blocking:
+              print(f'::error file={r["path"]},line={r["start"]["line"]}::{r["check_id"]}')
+          if blocking:
+              print(f"SAST gate FAILED: {len(blocking)} ERROR finding(s)")
+              sys.exit(1)
+          print("SAST gate passed: 0 ERROR findings")
+          PY

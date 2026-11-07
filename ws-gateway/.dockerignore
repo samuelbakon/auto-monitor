@@ -2,3 +2,9 @@ node_modules/
 dist/
 *.test.ts
 src/**/*.test.ts
+.env
+.env.*
+*.pem
+*.key
+.git
+Dockerfile

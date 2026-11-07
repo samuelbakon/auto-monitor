@@ -1,0 +1,83 @@
+# =============================================================================
+# CI · Stage 3b · SCA  (Software Composition Analysis)
+# Checks the THIRD-PARTY libraries we depend on against public vulnerability
+# databases (CVE / GitHub advisories) using their lockfiles:
+#   frontend/package-lock.json  ws-gateway/package-lock.json
+#   backend/pom.xml             agent/requirements.txt (resolved, see below)
+# Also produces an SBOM (CycloneDX) = the "ingredients list" of the release.
+#
+# Tool   : Trivy 0.69.3 binary, sha256-verified (NOT a mutable action tag -
+#          trivy-action tags were hijacked in March 2026, CVE-2026-33634)
+# Policy : CRITICAL with a fix available -> pipeline FAILS
+#          HIGH -> reported, must be triaged within 30 days
+# Exceptions: .trivyignore (CVE id + expiry date + reason, CODEOWNERS review)
+# =============================================================================
+name: CI · sca
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  TRIVY_VERSION: "0.69.3"
+  TRIVY_SHA256: "1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75"
+
+jobs:
+  trivy-dependencies:
+    name: Trivy dependency scan + SBOM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Trivy ${{ env.TRIVY_VERSION }} (checksum verified)
+        run: |
+          curl -sSfL -o trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tgz" | sha256sum -c -
+          tar xzf trivy.tgz trivy && sudo mv trivy /usr/local/bin/ && rm trivy.tgz
+          trivy --version
+
+      # agent/requirements.txt only has version RANGES (fastapi>=0.115,<1.0).
+      # A scanner cannot know which exact version will be installed, so it
+      # silently skips the file. We resolve the exact versions first.
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Resolve exact Python dependency versions
+        run: |
+          python -m venv /tmp/agent-venv
+          /tmp/agent-venv/bin/pip install -q -r agent/requirements.txt
+          mkdir -p sca-resolved/agent
+          /tmp/agent-venv/bin/pip freeze > sca-resolved/agent/requirements.txt
+          echo "Resolved $(wc -l < sca-resolved/agent/requirements.txt) Python packages"
+
+      - name: Full report (all severities, for humans)
+        run: |
+          mkdir -p reports
+          trivy fs --scanners vuln --skip-dirs node_modules \
+            --format table --output reports/sca-full.txt .
+          trivy fs --scanners vuln --skip-dirs node_modules \
+            --format json --output reports/sca-full.json .
+          cat reports/sca-full.txt
+
+      - name: SBOM (CycloneDX)
+        run: trivy fs --format cyclonedx --output reports/sbom.cdx.json .
+
+      - name: Keep SCA reports + SBOM
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sca-report
+          path: reports/
+          retention-days: 90
+
+      - name: Security gate - fail on fixable CRITICAL
+        run: |
+          trivy fs --scanners vuln --skip-dirs node_modules \
+            --severity CRITICAL --ignore-unfixed \
+            --ignorefile .trivyignore \
+            --exit-code 1 .

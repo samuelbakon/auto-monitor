@@ -185,7 +185,9 @@ async def update_job(job_id: str, **fields: Any) -> None:
         return
     params.append(job_id)
     async with conn() as c:
-        await c.execute(f"UPDATE subagent_jobs SET {', '.join(sets)} WHERE id = %s", params)
+        # Approved SAST exception EXC-05 (false positive): column names come only
+        # from the hard-coded `allowed` set above; values are bound parameters.
+        await c.execute(f"UPDATE subagent_jobs SET {', '.join(sets)} WHERE id = %s", params)  # nosemgrep
 
 
 async def get_job(job_id: str) -> dict | None:

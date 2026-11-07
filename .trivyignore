@@ -1,0 +1,9 @@
+# =============================================================================
+# Trivy approved vulnerability exceptions (auto-monitor)
+# Rules: one CVE per line, ALWAYS with an expiry date (exp:YYYY-MM-DD),
+#        a reason and the approver. Changes need CODEOWNERS (security) review.
+# After the expiry date Trivy reports the CVE again automatically.
+# Template:
+#   CVE-0000-00000 exp:2026-12-31
+#   # reason: not reachable (lib only used in tests) - approved by @Ezra-410
+# =============================================================================

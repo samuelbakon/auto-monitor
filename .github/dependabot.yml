@@ -1,0 +1,22 @@
+# Dependabot keeps dependencies AND the pinned GitHub Actions SHAs up to date
+# by opening reviewed pull requests (continuous SCA remediation).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /ws-gateway
+    schedule: { interval: weekly }
+  - package-ecosystem: maven
+    directory: /backend
+    schedule: { interval: weekly }
+  - package-ecosystem: pip
+    directory: /agent
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directories: [/frontend, /backend, /agent, /ws-gateway]
+    schedule: { interval: weekly }
